@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+*.sqlite3
+media/
+staticfiles/
+
+# Variables de entorno (nunca se suben)
+.env
+.env.*
+!.env.example
+
+# Node / Vite
+node_modules/
+dist/
+.vite/
+
+# Obsidian: se versiona la configuración compartida, no la personal
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace-mobile.json
+docs/.obsidian/cache
+docs/.obsidian/plugins/
+docs/.obsidian/community-plugins.json
+docs/.trash/
+
+# Claude: configuración local de cada quien
+.claude/settings.local.json
+docs/.claude/settings.local.json
+
+# Sistema
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
