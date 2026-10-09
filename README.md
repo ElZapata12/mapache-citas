@@ -62,6 +62,8 @@ mapache-citas/
 - Todo cambio entra por **pull request**, lo revisa otro integrante y se une con *squash merge*.
 - Los commits siguen el formato `tipo(alcance): descripción`, por ejemplo `feat(citas): valida empalmes`.
 
+- La guía completa está en [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Equipo
 
 | Integrante | Rol |
