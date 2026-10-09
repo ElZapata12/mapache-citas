@@ -1,28 +1,19 @@
 # MapacheCitas
 
-Sistema web de citas para la barbería **El Mapache Bigotón**. Permite agendar citas por barbero sin empalmes, registrar clientes y servicios, y consultar el resumen del día.
+Ya que el proyecto a sido subido a el repositorio en git hub y deseas ejecutarlo desde tu escritorio priemero debes de ir a tu editor de codigo y en este usando el comando:
 
-## Problema
+"git clone "Agregamos la direccion de nuestro repositorio"".
 
-La barbería lleva su agenda en papel. Eso provoca citas empalmadas, no se sabe qué barbero está libre, faltan datos de los clientes y nadie sabe cuánto se cobró en el día.
+Despues de esto ejecutamos:
 
-## Alcance del proyecto
+"cd  frontend "
 
-### Incluye
+que es la direccion de la carpeta donde resguardamos el proyecto. Posteriormente ejecutamos en terminal 
 
-| Funcionalidad | Usuario |
-| --- | --- |
-| Iniciar sesión con rol (administrador, recepción, barbero) | Todos |
-| Agendar una cita eligiendo cliente, servicio, barbero, fecha y hora libre | Recepción |
-| Impedir que un barbero tenga dos citas al mismo tiempo | Sistema |
-| Ver la agenda del día en columnas por barbero | Recepción, administrador |
-| Cambiar el estado de una cita: programada, atendida, cancelada, no asistió | Recepción, barbero |
-| Reprogramar una cita | Recepción |
-| Buscar y registrar clientes por nombre o teléfono | Recepción |
-| Dar de alta y editar barberos y servicios | Administrador |
-| Resumen del día: citas e ingresos por barbero y por servicio | Administrador |
+"npm install "
 
-### No incluye
+Para asi checar que tengamos actualizado "node.js" y demas dependencias
+Y yaal final simplemente ejecutamos:
 
 - Reserva en línea por parte del cliente.
 - Pagos en línea y facturación.
