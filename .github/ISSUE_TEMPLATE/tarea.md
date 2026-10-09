@@ -1,24 +1,35 @@
 ---
 name: Tarea
-about: Una tarea de máximo 1 día que sale de una spec
-title: "[S-0XX] "
+about: Una tarea concreta del proyecto, de máximo un día de trabajo
+title: "[Sprint X] "
 labels: ["tarea"]
 ---
 
-## Spec
+## Contexto
 
-`docs/02-specs/` · Criterios que cubre: CA-
+<!-- ¿Por qué hace falta esta tarea? 1 o 2 frases.
+     Ejemplo: «Sin el proyecto de Django creado, nadie puede empezar a programar la API». -->
 
 ## Qué hay que hacer
 
-<!-- Una o dos frases. -->
+<!-- Lista de pasos concretos. Si no sabes cómo se hace un paso, escribe qué se quiere lograr.
+     Ejemplo:
+     - Crear el entorno virtual dentro de backend/
+     - Instalar Django y guardar las dependencias en requirements.txt -->
+
+-
 
 ## Cómo sabremos que está terminada
 
-- [ ] 
-- [ ] Cumple la definición de terminado (`docs/04-proceso/definicion-de-terminado.md`).
+<!-- Condiciones que se puedan comprobar con un sí o un no.
+     Evita «que funcione bien»; mejor: «al abrir /admin aparece la pantalla de inicio de sesión». -->
+
+- [ ]
+- [ ] Entró a `main` por un PR aprobado.
 
 ## Estimación
 
+<!-- Marca una. Si crees que tomará más de un día, divídela en tareas más pequeñas. -->
+
 - [ ] Medio día
-- [ ] Un día (si es más, divídela)
+- [ ] Un día
