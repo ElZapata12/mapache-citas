@@ -49,3 +49,17 @@ Las reglas del negocio van en archivos `services.py`, separadas de las vistas. A
 ## Cómo correrlo
 
 Pendiente: se documenta cuando se cree el proyecto de Django.
+
+
+# Configuración del Backend
+
+## Requisitos previos
+- Python 3.10+
+- Docker y Docker Compose
+
+## Pasos de instalación
+
+1. **Levantar la base de datos con Docker:**
+   Desde la raíz del proyecto (donde se encuentra el `docker-compose.yml`), ejecuta:
+   ```bash
+   docker-compose up -d
