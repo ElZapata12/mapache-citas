@@ -59,9 +59,9 @@ mapache-citas/
 
 | Integrante | Rol |
 | --- | --- |
-| Miguel [apellido] | Líder de proyecto · UX · Pruebas |
-| [Nombre 2] | Backend · Base de datos |
-| [Nombre 3] | Frontend · Pruebas |
+| Miguel Zapata | Líder de proyecto · UX · Pruebas |
+| David Garcia | Backend · Base de datos |
+| Diego Lorenzo | Frontend · Pruebas |
 
 ## Estado
 
