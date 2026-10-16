@@ -1,43 +1,16 @@
-# Frontend · Interfaz de MapacheCitas
+# React + Vite
 
-Aplicación web en React que usan recepción, el administrador y los barberos. Muestra la información y la envía a la API; las reglas del negocio las valida el backend.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Tecnologías
+Currently, two official plugins are available:
 
-- React con Vite
-- Diseño basado en Figma
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Pantallas
+## React Compiler
 
-| ID | Pantalla | Quién la usa |
-| --- | --- | --- |
-| P01 | Inicio de sesión | Todos |
-| P02 | Agenda del día por barbero | Recepción, administrador |
-| P03 | Nueva cita y reprogramar | Recepción |
-| P04 | Detalle de cita y cambio de estado | Recepción, barbero |
-| P05 | Lista y búsqueda de clientes | Recepción |
-| P06 | Alta de cliente | Recepción |
-| P07 | Barberos | Administrador |
-| P08 | Servicios | Administrador |
-| P09 | Mi agenda (celular) | Barbero |
-| P10 | Resumen del día | Administrador |
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Reglas de diseño
+## Expanding the ESLint configuration
 
-- Funciona en celular (desde 360 px) y en escritorio (hasta 1440 px).
-- Cada estado de cita tiene un color fijo y siempre se muestra con su nombre: programada (azul), atendida (verde), cancelada (gris), no asistió (rojo).
-- Cada pantalla contempla sus estados: cargando, vacío, error y éxito.
-- Si la API responde que el horario está ocupado, se muestra el mensaje sin borrar lo que el usuario ya capturó.
-
-## Organización del código (planeada)
-
-```text
-src/
-├── pages/        Una carpeta por pantalla (P01 a P10)
-├── components/   Piezas reutilizables: botón, chip de estado, tarjeta de cita
-└── api/          Funciones que llaman a la API
-```
-
-## Cómo correrlo
-
-Pendiente: se documenta cuando se cree el proyecto de React.
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
