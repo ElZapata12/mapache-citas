@@ -1,16 +1,17 @@
+# Base de datos para desarrollo. Uso:  docker compose up -d
 services:
   db:
-    image: postgres:16-alpine
-    container_name: postgres_db
-    restart: always
+    image: postgres:16
+    container_name: mapache-db
     environment:
-      POSTGRES_DB: mapache_citas_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Garcia23
+      POSTGRES_DB: mapache
+      POSTGRES_USER: mapache
+      POSTGRES_PASSWORD: mapache
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - datos_postgres:/var/lib/postgresql/data
+    restart: unless-stopped
 
 volumes:
-  pgdata:
+  datos_postgres:
