@@ -17,17 +17,13 @@ import dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Cargar variables de entorno desde .env
-dotenv.load_dotenv(os.path.join(BASE_DIR, '.env'))
+# Cargar variables de entorno explícitamente desde la ruta de manage.py o backend/
+dotenv.load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+SECRET_KEY = os.getenv('SECRET_KEY', 'tu-secret-key-super-segura')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-s_2i2zsq5ai5accf#l6d-x4i(6!gq(7ow)1&1jz-k3h%z$%zhx'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+# Forzar que lea True correctamente
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't', 'yes')
 
 ALLOWED_HOSTS = []
 
@@ -78,13 +74,13 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # Configuración de base de datos PostgreSQL
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mapache_citas_db',
-        'USER': 'postgres',
-        'PASSWORD': 'Garcia23',
-        'HOST': 'localhost',
-        'PORT': '5433',  # <-- Apuntando al puerto limpio de Docker
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "mapache"),
+        "USER": os.getenv("DB_USER", "mapache"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "mapache"),
+        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
