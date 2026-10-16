@@ -48,18 +48,12 @@ Las reglas del negocio van en archivos `services.py`, separadas de las vistas. A
 
 ## Cómo correrlo
 
-Pendiente: se documenta cuando se cree el proyecto de Django.
+1. Levanta la base de datos (desde la raíz del repo): `docker compose up -d`
+2. Entra al backend y activa tu entorno virtual.
+3. Instala dependencias: `pip install -r requirements.txt`
+4. Copia `.env.example` como `.env`.
+5. Migra: `python manage.py migrate`
+6. Corre el servidor: `python manage.py runserver`
 
 
-# Configuración del Backend
 
-## Requisitos previos
-- Python 3.10+
-- Docker y Docker Compose
-
-## Pasos de instalación
-
-1. **Levantar la base de datos con Docker:**
-   Desde la raíz del proyecto (donde se encuentra el `docker-compose.yml`), ejecuta:
-   ```bash
-   docker-compose up -d
