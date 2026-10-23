@@ -15,9 +15,15 @@ export const crearCliente = (datos) => api('/clientes/', { metodo: 'POST', datos
 
 // Citas
 export const listarCitas = (fecha) => api(`/citas/?fecha=${fecha}`)
+export const obtenerCita = (id) => api(`/citas/${id}/`)
 export const crearCita = (datos) => api('/citas/', { metodo: 'POST', datos })
+export const cambiarEstado = (id, estado) =>
+  api(`/citas/${id}/estado/`, { metodo: 'PATCH', datos: { estado } })
 export const horariosDisponibles = ({ barbero, fecha, servicios }) => {
   const params = new URLSearchParams({ barbero, fecha })
   servicios.forEach((id) => params.append('servicios', id))
   return api(`/disponibilidad/?${params}`)
 }
+
+// Reportes
+export const resumenDelDia = (fecha) => api(`/reportes/dia/?fecha=${fecha}`)

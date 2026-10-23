@@ -141,3 +141,21 @@ def horarios_disponibles(*, barbero_id, servicio_ids, fecha):
             libres.append(timezone.localtime(inicio).strftime("%H:%M"))
         inicio += timedelta(minutes=BLOQUE_MIN)
     return libres
+
+
+TRANSICIONES_VALIDAS = {
+    Cita.Estado.PROGRAMADA: {Cita.Estado.ATENDIDA, Cita.Estado.CANCELADA, Cita.Estado.NO_ASISTIO},
+}
+
+
+def cambiar_estado(cita, nuevo_estado):
+    """RN-09: solo una cita programada puede pasar a atendida, cancelada o no asistió."""
+    permitidos = TRANSICIONES_VALIDAS.get(cita.estado, set())
+    if nuevo_estado not in permitidos:
+        raise ReglaDeNegocioError(
+            "TRANSICION_INVALIDA",
+            f"Una cita {cita.get_estado_display().lower()} no puede cambiar a {nuevo_estado}.",
+        )
+    cita.estado = nuevo_estado
+    cita.save(update_fields=["estado"])
+    return cita

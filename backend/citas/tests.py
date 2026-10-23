@@ -70,9 +70,7 @@ def test_ca03_bordes_que_se_tocan_si_se_permiten(datos):
 
 def test_ca04_cita_cancelada_libera_el_horario(datos):
     cita = agendar(datos, hora=time(14, 0))
-    # La función para cambiar estado llega en T-15; aquí cancelamos directo.
-    cita.estado = Cita.Estado.CANCELADA
-    cita.save()
+    services.cambiar_estado(cita, Cita.Estado.CANCELADA)
     agendar(datos, hora=time(14, 0))
 
 
@@ -119,3 +117,45 @@ def test_disponibilidad_quita_horas_ocupadas(datos):
     assert "10:15" not in libres
     assert "10:30" in libres
     assert libres[-1] == "19:30"
+
+
+def test_solo_programadas_cambian_de_estado(datos):
+    cita = agendar(datos)
+    services.cambiar_estado(cita, Cita.Estado.ATENDIDA)
+    with pytest.raises(ReglaDeNegocioError) as error:
+        services.cambiar_estado(cita, Cita.Estado.CANCELADA)
+    assert error.value.codigo == "TRANSICION_INVALIDA"
+
+
+def test_duracion_se_redondea_a_bloques_de_15(datos):
+    extra = Servicio.objects.create(descripcion="Cejas", costo=Decimal("50"), duracion_min=15)
+    assert services.duracion_total([datos["corte"], extra]) == 45
+    assert services.duracion_total([datos["corte"]]) == 30
+
+
+@pytest.mark.django_db(transaction=True)
+def test_ca10_dos_recepcionistas_a_la_vez_solo_una_gana(datos):
+    """Dos personas agendan al mismo barbero a la misma hora en el mismo instante."""
+    import threading
+
+    from django.db import connection
+
+    resultados = []
+
+    def intentar():
+        try:
+            agendar(datos, hora=time(15, 0))
+            resultados.append("ok")
+        except ReglaDeNegocioError as error:
+            resultados.append(error.codigo)
+        finally:
+            connection.close()
+
+    hilos = [threading.Thread(target=intentar) for _ in range(4)]
+    for hilo in hilos:
+        hilo.start()
+    for hilo in hilos:
+        hilo.join()
+
+    assert sorted(resultados) == ["HORARIO_OCUPADO"] * 3 + ["ok"]
+    assert Cita.objects.count() == 1

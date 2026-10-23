@@ -38,6 +38,8 @@ def manejador_de_errores(exc, context):
     else:
         detalle = respuesta.data.get("detail", "") if isinstance(respuesta.data, dict) else respuesta.data
         codigos = {401: "NO_AUTENTICADO", 403: "SIN_PERMISO", 404: "NO_ENCONTRADO", 405: "METODO_NO_PERMITIDO"}
+        if respuesta.status_code == status.HTTP_404_NOT_FOUND:
+            detalle = "No se encontró lo que buscas."  # Django lo manda en inglés ("No Cita matches...")
         respuesta.data = {
             "error": {
                 "codigo": codigos.get(respuesta.status_code, "ERROR"),
