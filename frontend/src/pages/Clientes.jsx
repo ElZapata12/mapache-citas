@@ -10,9 +10,11 @@ export default function Clientes() {
   const [errores, setErrores] = useState({})
   const [aviso, setAviso] = useState('')
 
-  // Busca cada vez que cambia el texto (espera 300 ms para no llamar a la API en cada tecla).
+  // Búsqueda con retraso para evitar llamadas excesivas a la API
   useEffect(() => {
-    const espera = setTimeout(() => buscarClientes(q).then(setClientes), 300)
+    const espera = setTimeout(() => {
+      buscarClientes(q).then(setClientes).catch(() => setClientes([]))
+    }, 300)
     return () => clearTimeout(espera)
   }, [q])
 
@@ -33,21 +35,31 @@ export default function Clientes() {
   return (
     <>
       <h1>Clientes</h1>
-      <div className="fila" style={{ alignItems: 'start' }}>
+      <div className="fila" style={{ alignItems: 'start', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+        
+        {/* Tabla y buscador */}
         <section className="tarjeta" style={{ flex: '2 1 420px' }}>
           <div className="campo">
             <label htmlFor="q">Buscar por nombre o teléfono</label>
             <input id="q" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <table>
-            <thead><tr><th>Nombre</th><th>Teléfono</th></tr></thead>
+            <thead>
+              <tr><th>Nombre</th><th>Teléfono</th></tr>
+            </thead>
             <tbody>
-              {clientes.map((c) => <tr key={c.id}><td>{c.nombre}</td><td>{c.telefono}</td></tr>)}
+              {clientes.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.nombre}</td>
+                  <td>{c.telefono}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
           {clientes.length === 0 && <p className="vacio">Sin resultados.</p>}
         </section>
 
+        {/* Formulario nuevo cliente */}
         <form className="tarjeta" onSubmit={guardar} style={{ flex: '1 1 280px', display: 'grid', gap: 12 }}>
           <h2>Nuevo cliente</h2>
           <div className="campo">
@@ -66,7 +78,7 @@ export default function Clientes() {
           </div>
           {errores.general && <p className="error">{errores.general[0]}</p>}
           {aviso && <p>{aviso}</p>}
-          <button className="boton boton--primario">Guardar cliente</button>
+          <button type="submit" className="boton boton--primario">Guardar cliente</button>
         </form>
       </div>
     </>

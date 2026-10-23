@@ -23,9 +23,9 @@ dotenv.load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_KEY', 'tu-secret-key-super-segura')
 
 # Forzar que lea True correctamente
-DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't', 'yes')
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't', 'yes')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 
 
 # Application definition
