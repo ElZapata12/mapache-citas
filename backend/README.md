@@ -15,7 +15,8 @@ API REST que guarda los datos y aplica todas las reglas del negocio. El frontend
 | barbero | nombre, teléfono, activo |
 | cliente | nombre, teléfono (único, 10 dígitos), notas |
 | servicio | descripción, costo, duración en minutos, activo |
-| cita | barbero, cliente, servicio, fecha, hora de inicio, hora de fin, costo cobrado, estado, notas |
+| cita | barbero, cliente, inicio, fin, estado, notas |
+| cita_servicio | cita, servicio, costo cobrado, duración (copia del momento de agendar) |
 | usuario | correo, contraseña, rol (admin, recepcion, barbero) |
 
 Estados de una cita: `programada`, `atendida`, `cancelada`, `no_asistio`.
@@ -28,19 +29,24 @@ Estados de una cita: `programada`, `atendida`, `cancelada`, `no_asistio`.
 - Barberos y servicios inactivos no se pueden usar en citas nuevas.
 - Copia el costo del servicio a la cita al momento de agendar.
 
-## Endpoints planeados
+## Endpoints
 
-| Método | Ruta | Para qué |
-| --- | --- | --- |
-| POST | `/api/auth/login` | Iniciar sesión |
-| GET | `/api/citas?fecha=` | Citas de un día |
-| POST | `/api/citas` | Crear una cita (responde 409 si el horario está ocupado) |
-| PATCH | `/api/citas/{id}/estado` | Cambiar el estado de una cita |
-| GET | `/api/disponibilidad?fecha=&barbero=&servicio=` | Horarios libres |
-| GET, POST | `/api/clientes` | Buscar y registrar clientes |
-| GET, POST | `/api/barberos` | Listar y registrar barberos |
-| GET, POST | `/api/servicios` | Listar y registrar servicios |
-| GET | `/api/reportes/dia?fecha=` | Resumen del día |
+Todas las rutas terminan en `/`. Salvo el login, piden el encabezado `Authorization: Token <token>`. Los errores tienen la forma `{"error": {"codigo", "mensaje", "campos"}}`.
+
+| Método | Ruta | Para qué | Estado |
+| --- | --- | --- | --- |
+| POST | `/api/auth/login/` | Iniciar sesión | Listo |
+| POST | `/api/auth/logout/` | Cerrar sesión | Listo |
+| GET | `/api/auth/yo/` | Quién es el dueño del token | Listo |
+| GET | `/api/barberos/` | Barberos activos | Listo |
+| GET | `/api/servicios/` | Servicios activos | Listo |
+| GET, POST | `/api/clientes/` | Buscar (`?q=`) y registrar clientes | Listo |
+| GET, PATCH | `/api/clientes/{id}/` | Consultar y editar un cliente | Listo |
+| GET | `/api/citas/?fecha=&barbero=` | Citas de un día (el barbero solo ve las suyas) | Listo |
+| POST | `/api/citas/` | Crear una cita (409 si el horario está ocupado) | Listo |
+| GET | `/api/disponibilidad/?barbero=&fecha=&servicios=` | Horarios libres | Listo |
+| PATCH | `/api/citas/{id}/estado/` | Cambiar el estado de una cita | Pendiente (T-15) |
+| GET | `/api/reportes/dia/?fecha=` | Resumen del día | Pendiente (T-17) |
 
 ## Organización del código
 
@@ -55,5 +61,17 @@ Las reglas del negocio van en archivos `services.py`, separadas de las vistas. A
 5. Migra: `python manage.py migrate`
 6. Corre el servidor: `python manage.py runserver`
 
+## Pruebas
 
+Con el entorno virtual activo y la base de datos arriba:
 
+```bash
+cd backend
+pytest -v
+```
+
+Las reglas de las citas (empalmes, horario de 10:00 a 20:00, precio congelado y horarios disponibles) están en `citas/services.py` y se prueban en `citas/tests.py`. La API se prueba en `citas/test_api.py`.
+
+## Datos de prueba
+
+`python manage.py cargar_demo` crea 3 barberos y 6 servicios. Se puede correr varias veces sin duplicar.
