@@ -60,3 +60,13 @@ class FiltroCitasSerializer(serializers.Serializer):
 
     fecha = serializers.DateField(required=False)
     barbero = serializers.IntegerField(required=False)
+
+
+class CambiarEstadoSerializer(serializers.Serializer):
+    estado = serializers.ChoiceField(choices=Cita.Estado.choices)
+
+
+class FechaSerializer(serializers.Serializer):
+    """Valida la fecha opcional de los reportes (AAAA-MM-DD)."""
+
+    fecha = serializers.DateField(required=False)

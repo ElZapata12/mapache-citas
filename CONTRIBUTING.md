@@ -74,7 +74,7 @@ Si tu revisor deja comentarios, haz los cambios en la **misma rama** y vuelve a 
 
 Cuando esté aprobado:
 
-1. Presiona **Squash and merge** → **Confirm**.
+1. Presiona **Create a merge commit** → **Confirm**. (No uses *Squash*: junta los commits en uno solo y se pierde quién escribió cada parte.)
 2. Presiona **Delete branch**.
 
 ### 8. Actualiza tu computadora

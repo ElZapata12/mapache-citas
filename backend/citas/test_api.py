@@ -118,3 +118,74 @@ def test_filtros_mal_escritos_responden_400_y_no_500(escenario):
         respuesta = api.get(f"/api/citas/?{consulta}")
         assert respuesta.status_code == 400, consulta
         assert respuesta.data["error"]["codigo"] == "VALIDACION"
+
+
+def test_cambiar_estado_por_api(escenario):
+    api = cliente_api("ana")
+    cita = api.post("/api/citas/", cuerpo(escenario, "10:00"), format="json").data
+
+    atendida = api.patch(f"/api/citas/{cita['id']}/estado/", {"estado": "atendida"}, format="json")
+    assert atendida.data["estado"] == "atendida"
+
+    otra_vez = api.patch(f"/api/citas/{cita['id']}/estado/", {"estado": "cancelada"}, format="json")
+    assert otra_vez.status_code == 400
+    assert otra_vez.data["error"]["codigo"] == "TRANSICION_INVALIDA"
+
+    invalido = api.patch(f"/api/citas/{cita['id']}/estado/", {"estado": "dormida"}, format="json")
+    assert invalido.status_code == 400
+    assert invalido.data["error"]["codigo"] == "VALIDACION"
+
+
+def test_detalle_de_cita_y_404_para_barbero_ajeno(escenario):
+    cita = cliente_api("ana").post("/api/citas/", cuerpo(escenario, "10:00"), format="json").data
+    assert cliente_api("ana").get(f"/api/citas/{cita['id']}/").data["cliente_nombre"] == "Arturo Beltrán"
+    assert cliente_api("luis").get(f"/api/citas/{cita['id']}/").status_code == 200
+
+    otro = Barbero.objects.create(nombre="Toño Castillo")
+    Usuario.objects.create_user("tono", password="clave-segura-123", rol=Usuario.Rol.BARBERO, barbero=otro)
+    tono = cliente_api("tono")
+    assert tono.get(f"/api/citas/{cita['id']}/").status_code == 404
+    assert tono.patch(f"/api/citas/{cita['id']}/estado/", {"estado": "atendida"}, format="json").status_code == 404
+    # el barbero dueño sí puede cerrar su propia cita
+    assert cliente_api("luis").patch(
+        f"/api/citas/{cita['id']}/estado/", {"estado": "atendida"}, format="json"
+    ).data["estado"] == "atendida"
+
+
+def test_resumen_solo_admin_y_suma_solo_atendidas(escenario):
+    api = cliente_api("ana")
+    primera = api.post("/api/citas/", cuerpo(escenario, "10:00"), format="json").data
+    segunda = api.post("/api/citas/", cuerpo(escenario, "12:00"), format="json").data
+    api.patch(f"/api/citas/{primera['id']}/estado/", {"estado": "atendida"}, format="json")
+    api.patch(f"/api/citas/{segunda['id']}/estado/", {"estado": "cancelada"}, format="json")
+
+    assert api.get("/api/reportes/dia/").status_code == 403  # recepción no ve dinero (RN-10)
+    assert cliente_api("luis").get("/api/reportes/dia/").status_code == 403
+    resumen = cliente_api("jesus").get(f"/api/reportes/dia/?fecha={proximo_lunes()}").data
+    assert resumen["cobrado"] == "270.00"  # la cancelada no suma (RN-07)
+    assert resumen["total_citas"] == 2
+    assert resumen["por_estado"]["atendida"] == 1 and resumen["por_estado"]["cancelada"] == 1
+    assert resumen["por_barbero"][0]["atendidas"] == 1
+    assert resumen["por_barbero"][0]["cobrado"] == "270.00"
+    assert {f["servicio"]: f["cobrado"] for f in resumen["por_servicio"]} == {
+        "Corte clásico": "150.00",
+        "Arreglo de barba": "120.00",
+    }
+
+
+def test_resumen_con_fecha_mal_escrita_responde_400(escenario):
+    respuesta = cliente_api("jesus").get("/api/reportes/dia/?fecha=hola")
+    assert respuesta.status_code == 400
+    assert respuesta.data["error"]["codigo"] == "VALIDACION"
+
+
+def test_resumen_de_un_dia_sin_citas(escenario):
+    resumen = cliente_api("jesus").get("/api/reportes/dia/?fecha=2030-01-07").data
+    assert resumen["total_citas"] == 0 and resumen["cobrado"] == "0.00"
+    assert resumen["por_barbero"] == [] and resumen["por_servicio"] == []
+
+
+def test_cita_inexistente_responde_404_en_espanol(escenario):
+    respuesta = cliente_api("ana").get("/api/citas/99999/")
+    assert respuesta.status_code == 404
+    assert respuesta.data["error"] == {"codigo": "NO_ENCONTRADO", "mensaje": "No se encontró lo que buscas."}
