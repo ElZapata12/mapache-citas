@@ -110,3 +110,11 @@ def test_postgres_rechaza_empalmes_aunque_se_salten_el_servicio(escenario):
             inicio=inicio + timedelta(minutes=15),
             fin=inicio + timedelta(minutes=45),
         )
+
+
+def test_filtros_mal_escritos_responden_400_y_no_500(escenario):
+    api = cliente_api("ana")
+    for consulta in ("fecha=abc", "barbero=abc", "fecha=2026-13-45"):
+        respuesta = api.get(f"/api/citas/?{consulta}")
+        assert respuesta.status_code == 400, consulta
+        assert respuesta.data["error"]["codigo"] == "VALIDACION"

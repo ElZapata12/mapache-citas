@@ -53,3 +53,10 @@ class DisponibilidadSerializer(serializers.Serializer):
     barbero = serializers.IntegerField()
     fecha = serializers.DateField()
     servicios = serializers.ListField(child=serializers.IntegerField(), min_length=1)
+
+
+class FiltroCitasSerializer(serializers.Serializer):
+    """Valida los filtros opcionales de GET /api/citas/ (fecha y barbero)."""
+
+    fecha = serializers.DateField(required=False)
+    barbero = serializers.IntegerField(required=False)

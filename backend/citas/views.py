@@ -8,7 +8,12 @@ from cuentas.permisos import EsAdminORecepcion
 
 from . import services
 from .models import Cita
-from .serializers import CitaCrearSerializer, CitaSerializer, DisponibilidadSerializer
+from .serializers import (
+    CitaCrearSerializer,
+    CitaSerializer,
+    DisponibilidadSerializer,
+    FiltroCitasSerializer,
+)
 
 
 def citas_visibles_para(usuario):
@@ -23,9 +28,11 @@ class CitaListaCrearView(APIView):
     """GET /api/citas/?fecha=AAAA-MM-DD&barbero=ID   POST /api/citas/"""
 
     def get(self, request):
-        fecha = request.query_params.get("fecha") or timezone.localdate().isoformat()
+        filtros = FiltroCitasSerializer(data=request.query_params)
+        filtros.is_valid(raise_exception=True)  # fecha o barbero mal escritos -> 400, no 500
+        fecha = filtros.validated_data.get("fecha") or timezone.localdate()
         citas = citas_visibles_para(request.user).filter(inicio__date=fecha)
-        barbero = request.query_params.get("barbero")
+        barbero = filtros.validated_data.get("barbero")
         if barbero:
             citas = citas.filter(barbero_id=barbero)
         return Response(CitaSerializer(citas, many=True).data)
