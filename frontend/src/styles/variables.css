@@ -1,0 +1,29 @@
+/* Variables de diseño: los mismos nombres y valores que la guía visual de Figma. */
+:root {
+  --color-fondo: #f6f1e9;
+  --color-superficie: #fffdf9;
+  --color-superficie-2: #efe7db;
+  --color-borde: #e3d9cb;
+  --color-borde-fuerte: #cdbfad;
+  --color-texto: #1e1b18;
+  --color-texto-2: #5e574f;
+  --color-primario: #b4582a;
+  --color-primario-oscuro: #8f4220;
+  --color-primario-claro: #f3dfd1;
+
+  --color-programada: #2f5e9e;
+  --color-programada-fondo: #e4ecf7;
+  --color-atendida: #256b43;
+  --color-atendida-fondo: #e0f0e6;
+  --color-cancelada: #6b6560;
+  --color-cancelada-fondo: #eeeae5;
+  --color-no_asistio: #b3261e;
+  --color-no_asistio-fondo: #f8e1de;
+
+  --fuente-titulos: 'Fraunces', Georgia, serif;
+  --fuente-texto: 'Figtree', system-ui, sans-serif;
+
+  --radio-campo: 6px;
+  --radio-bloque: 8px;
+  --radio-tarjeta: 12px;
+}
