@@ -12,6 +12,14 @@ class Usuario(AbstractUser):
         BARBERO = "barbero", "Barbero"
 
     rol = models.CharField(max_length=10, choices=Rol.choices, default=Rol.RECEPCION)
+    barbero = models.OneToOneField(
+        "catalogo.Barbero",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="usuario",
+        help_text="Solo para usuarios con rol barbero.",
+    )
 
     def __str__(self):
         return f"{self.username} ({self.get_rol_display()})"
