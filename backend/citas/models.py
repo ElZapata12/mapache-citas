@@ -46,7 +46,7 @@ class Cita(models.Model):
             ),
         ]
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.cliente.nombre} con {self.barbero.nombre} el {self.inicio:%d/%m %H:%M}"
 
     @property
@@ -63,5 +63,5 @@ class CitaServicio(models.Model):
     costo_cobrado = models.DecimalField(max_digits=8, decimal_places=2)
     duracion_min = models.PositiveSmallIntegerField()
 
-    def _str_(self):
+    def __str__(self):
         return f"{self.servicio.descripcion} (${self.costo_cobrado})"

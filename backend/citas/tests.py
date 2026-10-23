@@ -1,3 +1,9 @@
+"""Pruebas de las reglas de negocio de las citas.
+
+Cada prueba corresponde a un criterio de aceptación (CA) de la spec S-04.
+Correr con:  pytest
+"""
+
 from datetime import date, time, timedelta
 from decimal import Decimal
 

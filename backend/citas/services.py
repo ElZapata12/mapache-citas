@@ -1,3 +1,9 @@
+"""Reglas de negocio de las citas (RN-01 a RN-08).
+
+Aquí vive la lógica importante. Las vistas solo reciben la petición, llaman a estas
+funciones y devuelven la respuesta. Así las reglas se pueden probar sin HTTP.
+"""
+
 import math
 from datetime import datetime, time, timedelta
 
@@ -43,7 +49,7 @@ def validar_horario(inicio, fin):
 
 def buscar_empalme(barbero, inicio, fin, excluir_cita_id=None):
     """RN-01: dos rangos [a, b) y [c, d) se traslapan si a < d y c < b."""
-    citas = Cita.objects.filter(barbero=barbero, inicio_lt=fin, fin_gt=inicio).exclude(
+    citas = Cita.objects.filter(barbero=barbero, inicio__lt=fin, fin__gt=inicio).exclude(
         estado=Cita.Estado.CANCELADA
     )
     if excluir_cita_id:
@@ -121,7 +127,7 @@ def horarios_disponibles(*, barbero_id, servicio_ids, fecha):
         return []
 
     ocupadas = list(
-        Cita.objects.filter(barbero=barbero, inicio_lt=cierre, fin_gt=apertura)
+        Cita.objects.filter(barbero=barbero, inicio__lt=cierre, fin__gt=apertura)
         .exclude(estado=Cita.Estado.CANCELADA)
         .values_list("inicio", "fin")
     )
