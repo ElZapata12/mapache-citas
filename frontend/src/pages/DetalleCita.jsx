@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { obtenerCita, cancelarCita } from '../api/endpoints.js'
-import { hora, dinero } from '../utils/formato.js'
+import { hora, dinero } from '../utils/fechas.js'
 import ChipEstado from '../components/ChipEstado.jsx'
 
 export default function DetalleCita() {
