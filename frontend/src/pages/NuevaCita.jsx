@@ -1,165 +1,171 @@
 import { useEffect, useState } from 'react'
-import { buscarClientes, listarBarberos, listarServicios, crearCita } from '../api/endpoints.js'
-import { dinero } from '../utils/formato.js'
+import { useNavigate } from 'react-router-dom'
+import {
+  buscarClientes,
+  crearCita,
+  horariosDisponibles,
+  listarBarberos,
+  listarServicios,
+} from '../api/endpoints.js'
+import { dinero, hoyISO } from '../utils/fechas.js'
 
-export default function Nuevacita() {
-  const [busquedaCliente, setBusquedaCliente] = useState('')
-  const [resultadosClientes, setResultadosClientes] = useState([])
-  const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
-
+export default function NuevaCita() {
+  const navegar = useNavigate()
   const [barberos, setBarberos] = useState([])
   const [servicios, setServicios] = useState([])
 
-  const [barberoId, setBarberoId] = useState('')
-  const [fechaHora, setFechaHora] = useState('')
-  const [serviciosIds, setServiciosIds] = useState([])
-
+  const [busqueda, setBusqueda] = useState('')
+  const [encontrados, setEncontrados] = useState([])
+  const [cliente, setCliente] = useState(null)
+  const [elegidos, setElegidos] = useState([]) // ids de servicios
+  const [barbero, setBarbero] = useState('')
+  const [fecha, setFecha] = useState(hoyISO())
+  const [disponibles, setDisponibles] = useState({ clave: '', horarios: [] })
+  const [recargas, setRecargas] = useState(0)
+  const [horaInicio, setHoraInicio] = useState('')
   const [error, setError] = useState('')
-  const [exito, setExito] = useState(null)
+  const [guardando, setGuardando] = useState(false)
 
-  // Cargar barberos y servicios al iniciar
+  // 1. Al abrir la pantalla: trae barberos y servicios activos.
   useEffect(() => {
-    listarBarberos().then(setBarberos).catch(() => {})
-    listarServicios().then(setServicios).catch(() => {})
+    listarBarberos().then(setBarberos).catch((e) => setError(e.message))
+    listarServicios().then(setServicios).catch((e) => setError(e.message))
   }, [])
 
-  // Buscar clientes con retraso
+  // 2. Cuando ya hay barbero, fecha y servicios: pide los horarios libres.
+  //    "clave" resume esos tres datos; si cambia alguno, se piden de nuevo.
+  const clave = barbero && fecha && elegidos.length > 0 ? `${barbero}|${fecha}|${elegidos.join(',')}` : ''
   useEffect(() => {
-    if (!busquedaCliente.trim() || clienteSeleccionado) return
-    const t = setTimeout(() => {
-      buscarClientes(busquedaCliente).then(setResultadosClientes).catch(() => {})
-    }, 300)
-    return () => clearTimeout(t)
-  }, [busquedaCliente, clienteSeleccionado])
+    if (!clave) return
+    let vigente = true
+    horariosDisponibles({ barbero, fecha, servicios: elegidos })
+      .then((r) => vigente && setDisponibles({ clave, horarios: r.horarios }))
+      .catch((e) => vigente && setError(e.message))
+    return () => {
+      vigente = false
+    }
+  }, [clave, barbero, fecha, elegidos, recargas])
+  const horarios = disponibles.clave === clave ? disponibles.horarios : []
+  const cargandoHorarios = Boolean(clave) && disponibles.clave !== clave
 
-  // Valores derivados
-  const serviciosSeleccionados = servicios.filter(s => serviciosIds.includes(s.id))
-  const minutos = serviciosSeleccionados.reduce((acc, s) => acc + s.duracion_minutos, 0)
-  const total = serviciosSeleccionados.reduce((acc, s) => acc + Number(s.precio), 0)
-
-  function toggleServicio(id) {
-    setServiciosIds(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    )
+  async function buscar() {
+    setError('')
+    try {
+      setEncontrados(await buscarClientes(busqueda))
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
-  async function guardarCita(e) {
-    e.preventDefault()
-    setError('')
-    setExito(null)
+  function alternarServicio(id) {
+    setElegidos((actuales) => (actuales.includes(id) ? actuales.filter((x) => x !== id) : [...actuales, id]))
+    setHoraInicio('') // si cambian los servicios, la hora elegida puede ya no servir
+  }
 
+  const seleccion = servicios.filter((s) => elegidos.includes(s.id))
+  const total = seleccion.reduce((suma, s) => suma + Number(s.costo), 0)
+  const minutos = seleccion.reduce((suma, s) => suma + s.duracion_min, 0)
+  const listo = cliente && barbero && horaInicio && elegidos.length > 0
+
+  async function guardar() {
+    setError('')
+    setGuardando(true)
     try {
-      const nueva = await crearCita({
-        cliente: clienteSeleccionado.id,
-        barbero: barberoId,
-        fecha_hora: fechaHora,
-        servicios: serviciosIds
-      })
-      setExito(nueva)
-      setClienteSeleccionado(null)
-      setBusquedaCliente('')
-      setServiciosIds([])
-      setFechaHora('')
-      setBarberoId('')
-    } catch (err) {
-      setError(err.codigo ? `${err.codigo}: ${err.message}` : 'Ocurrió un error al guardar la cita.')
+      await crearCita({ cliente: cliente.id, barbero: Number(barbero), servicios: elegidos, fecha, hora_inicio: horaInicio })
+      navegar(`/agenda?fecha=${fecha}`)
+    } catch (e) {
+      // 409 = otra persona ocupó el horario: se avisa y se vuelven a pedir los horarios.
+      setError(e.message)
+      if (e.status === 409) {
+        setHoraInicio('')
+        setDisponibles({ clave: '', horarios: [] })
+        setRecargas((n) => n + 1)
+      }
+    } finally {
+      setGuardando(false)
     }
   }
 
   return (
     <>
       <h1>Nueva cita</h1>
-      
-      {exito && (
-        <div className="tarjeta" style={{ background: '#d1e7dd', color: '#0f5132', marginBottom: 16 }}>
-          ¡Cita registrada con éxito!
+
+      <section className="tarjeta" style={{ display: 'grid', gap: 12 }}>
+        <h2>1. Cliente</h2>
+        {cliente ? (
+          <div className="fila">
+            <strong>{cliente.nombre}</strong> · {cliente.telefono}
+            <button className="boton" onClick={() => setCliente(null)}>Cambiar</button>
+          </div>
+        ) : (
+          <>
+            <div className="fila">
+              <div className="campo" style={{ flexGrow: 1 }}>
+                <label htmlFor="busqueda">Nombre o teléfono</label>
+                <input id="busqueda" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+              </div>
+              <button className="boton" style={{ alignSelf: 'end' }} onClick={buscar}>Buscar</button>
+            </div>
+            {encontrados.map((c) => (
+              <button key={c.id} className="boton" style={{ justifySelf: 'start' }} onClick={() => setCliente(c)}>
+                {c.nombre} · {c.telefono}
+              </button>
+            ))}
+          </>
+        )}
+      </section>
+
+      <section className="tarjeta" style={{ display: 'grid', gap: 12 }}>
+        <h2>2. Servicios</h2>
+        <div className="fila">
+          {servicios.map((s) => (
+            <button
+              key={s.id}
+              aria-pressed={elegidos.includes(s.id)}
+              className={`boton ${elegidos.includes(s.id) ? 'boton--seleccionado' : ''}`}
+              onClick={() => alternarServicio(s.id)}
+            >
+              {s.descripcion} · {s.duracion_min} min · {dinero(s.costo)}
+            </button>
+          ))}
         </div>
-      )}
+        <span className="vacio">Duración total: {minutos} min · Total: {dinero(total)}</span>
+      </section>
 
-      <div className="fila" style={{ alignItems: 'start', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-        
-        <section className="tarjeta" style={{ flex: '2 1 450px', display: 'grid', gap: 16 }}>
-          
-          {/* Cliente */}
+      <section className="tarjeta" style={{ display: 'grid', gap: 12 }}>
+        <h2>3. Barbero, fecha y hora</h2>
+        <div className="fila">
           <div className="campo">
-            <label>Cliente</label>
-            {clienteSeleccionado ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8f9fa', padding: '8px 12px', borderRadius: 4 }}>
-                <span><strong>{clienteSeleccionado.nombre}</strong> ({clienteSeleccionado.telefono})</span>
-                <button type="button" className="boton" onClick={() => setClienteSeleccionado(null)}>Cambiar</button>
-              </div>
-            ) : (
-              <div>
-                <input 
-                  placeholder="Buscar por nombre o teléfono..." 
-                  value={busquedaCliente} 
-                  onChange={e => {
-                    const val = e.target.value
-                    setBusquedaCliente(val)
-                    if (!val.trim()) setResultadosClientes([])
-                  }} 
-                />
-                {resultadosClientes.length > 0 && (
-                  <ul style={{ background: 'white', border: '1px solid #ccc', listStyle: 'none', padding: 0, margin: 0, maxHeight: 150, overflowY: 'auto' }}>
-                    {resultadosClientes.map(c => (
-                      <li key={c.id} onClick={() => { setClienteSeleccionado(c); setResultadosClientes([]); }} style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid #eee' }}>
-                        {c.nombre} - {c.telefono}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+            <label htmlFor="barbero">Barbero</label>
+            <select id="barbero" value={barbero} onChange={(e) => { setBarbero(e.target.value); setHoraInicio('') }}>
+              <option value="">Elige…</option>
+              {barberos.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+            </select>
           </div>
-
-          {/* Servicios */}
           <div className="campo">
-            <label>Servicios</label>
-            <div style={{ display: 'grid', gap: 8 }}>
-              {servicios.map(s => (
-                <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={serviciosIds.includes(s.id)} 
-                    onChange={() => toggleServicio(s.id)} 
-                  />
-                  {s.nombre} ({s.duracion_minutos} min - {dinero(s.precio)})
-                </label>
-              ))}
-            </div>
-            {serviciosIds.length > 0 && (
-              <p style={{ marginTop: 8, fontWeight: 'bold' }}>
-                Duración total: {minutos} min · Total: {dinero(total)}
-              </p>
-            )}
+            <label htmlFor="fecha">Fecha</label>
+            <input id="fecha" type="date" value={fecha} onChange={(e) => { setFecha(e.target.value); setHoraInicio('') }} />
           </div>
+        </div>
+        {cargandoHorarios && <p className="vacio">Buscando horarios…</p>}
+        {clave && !cargandoHorarios && horarios.length === 0 && (
+          <p className="vacio">No hay horarios libres. Prueba otro barbero u otra fecha.</p>
+        )}
+        <div className="horarios">
+          {horarios.map((h) => (
+            <button key={h} className={`boton ${h === horaInicio ? 'boton--seleccionado' : ''}`} onClick={() => setHoraInicio(h)}>
+              {h}
+            </button>
+          ))}
+        </div>
+      </section>
 
-          {/* Barbero y Fecha/Hora manual */}
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <div className="campo" style={{ flex: 1 }}>
-              <label htmlFor="barbero">Barbero</label>
-              <select id="barbero" value={barberoId} onChange={e => setBarberoId(e.target.value)}>
-                <option value="">Selecciona...</option>
-                {barberos.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
-              </select>
-            </div>
-            <div className="campo" style={{ flex: 1 }}>
-              <label htmlFor="fechaHora">Fecha y Hora</label>
-              <input type="datetime-local" id="fechaHora" value={fechaHora} onChange={e => setFechaHora(e.target.value)} />
-            </div>
-          </div>
-
-          {error && <p className="error" style={{ color: 'red' }}>{error}</p>}
-
-          <button 
-            type="button"
-            className="boton boton--primario" 
-            disabled={!clienteSeleccionado || !barberoId || !fechaHora || serviciosIds.length === 0}
-            onClick={guardarCita}
-          >
-            Guardar cita
-          </button>
-        </section>
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="fila" style={{ justifyContent: 'flex-end' }}>
+        <button className="boton" onClick={() => navegar('/agenda')}>Cancelar</button>
+        <button className="boton boton--primario" disabled={!listo || guardando} onClick={guardar}>
+          {guardando ? 'Guardando…' : 'Guardar cita'}
+        </button>
       </div>
     </>
   )

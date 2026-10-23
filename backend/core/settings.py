@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "django.contrib.postgres",
     # Librerías de terceros
     "rest_framework",
     "rest_framework.authtoken",
@@ -44,6 +45,9 @@ INSTALLED_APPS = [
     "cuentas",
     "catalogo",
     "clientes",
+    "citas",
+
+
 ]
 
 MIDDLEWARE = [

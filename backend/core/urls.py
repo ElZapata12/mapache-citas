@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 
 from catalogo.views import BarberoListaView, ServicioListaView
+from citas.views import CitaListaCrearView, DisponibilidadView
 from clientes.views import ClienteDetalleView, ClienteListaCrearView
 from cuentas.views import LoginView, LogoutView, YoView
 
@@ -14,6 +15,9 @@ urlpatterns = [
     # Catálogo
     path("api/barberos/", BarberoListaView.as_view()),
     path("api/servicios/", ServicioListaView.as_view()),
+    # Citas
+    path("api/citas/", CitaListaCrearView.as_view()),
+    path("api/disponibilidad/", DisponibilidadView.as_view()),
     # Clientes
     path("api/clientes/", ClienteListaCrearView.as_view()),
     path("api/clientes/<int:pk>/", ClienteDetalleView.as_view()),
