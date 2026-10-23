@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # Nuestras apps
     "cuentas",
     "catalogo",
+    "clientes",
 ]
 
 MIDDLEWARE = [
@@ -137,6 +138,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = "cuentas.Usuario"
 
 REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "core.excepciones.manejador_de_errores",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
