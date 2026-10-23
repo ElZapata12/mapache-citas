@@ -1,0 +1,58 @@
+import citas.models
+import django.contrib.postgres.constraints
+import django.contrib.postgres.fields.ranges
+import django.db.models.deletion
+from django.contrib.postgres.operations import BtreeGistExtension
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        ('catalogo', '0001_initial'),
+        ('clientes', '0001_initial'),
+    ]
+
+    operations = [
+        BtreeGistExtension(),
+        migrations.CreateModel(
+            name='Cita',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('inicio', models.DateTimeField()),
+                ('fin', models.DateTimeField()),
+                ('estado', models.CharField(choices=[('programada', 'Programada'), ('atendida', 'Atendida'), ('cancelada', 'Cancelada'), ('no_asistio', 'No asistió')], default='programada', max_length=12)),
+                ('notas', models.TextField(blank=True)),
+                ('creada_en', models.DateTimeField(auto_now_add=True)),
+                ('barbero', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='citas', to='catalogo.barbero')),
+                ('cliente', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='citas', to='clientes.cliente')),
+            ],
+            options={
+                'ordering': ['inicio'],
+            },
+        ),
+        migrations.CreateModel(
+            name='CitaServicio',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('costo_cobrado', models.DecimalField(decimal_places=2, max_digits=8)),
+                ('duracion_min', models.PositiveSmallIntegerField()),
+                ('cita', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='servicios', to='citas.cita')),
+                ('servicio', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='catalogo.servicio')),
+            ],
+        ),
+        migrations.AddIndex(
+            model_name='cita',
+            index=models.Index(fields=['barbero', 'inicio'], name='citas_cita_barbero_0e9f90_idx'),
+        ),
+        migrations.AddConstraint(
+            model_name='cita',
+            constraint=models.CheckConstraint(condition=models.Q(('fin__gt', models.F('inicio'))), name='cita_fin_despues_de_inicio'),
+        ),
+        migrations.AddConstraint(
+            model_name='cita',
+            constraint=django.contrib.postgres.constraints.ExclusionConstraint(condition=models.Q(('estado', 'cancelada'), _negated=True), expressions=[(citas.models.TsTzRange('inicio', 'fin', django.contrib.postgres.fields.ranges.RangeBoundary()), '&&'), ('barbero', '=')], name='cita_sin_empalmes_por_barbero'),
+        ),
+    ]
