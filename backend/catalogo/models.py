@@ -11,10 +11,25 @@ def multiplo_de_15(valor):
         raise ValidationError("La duración debe ser múltiplo de 15 minutos.")
 
 
+class Sucursal(models.Model):
+    nombre = models.CharField(max_length=80, unique=True)
+    direccion = models.CharField(max_length=160, blank=True)
+    telefono = models.CharField(max_length=10, blank=True, validators=[telefono_valido])
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["nombre"]
+        verbose_name_plural = "sucursales"
+
+    def __str__(self):
+        return self.nombre
+
+
 class Barbero(models.Model):
     nombre = models.CharField(max_length=80)
     telefono = models.CharField(max_length=10, blank=True, validators=[telefono_valido])
     activo = models.BooleanField(default=True)
+    sucursal = models.ForeignKey(Sucursal, on_delete=models.PROTECT, related_name="barberos")
 
     class Meta:
         ordering = ["nombre"]

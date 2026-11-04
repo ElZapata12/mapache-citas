@@ -10,7 +10,7 @@ class CitaServicioInline(admin.TabularInline):
 
 @admin.register(Cita)
 class CitaAdmin(admin.ModelAdmin):
-    list_display = ("inicio", "fin", "barbero", "cliente", "estado")
-    list_filter = ("estado", "barbero")
+    list_display = ("inicio", "fin", "sucursal", "barbero", "cliente", "estado")
+    list_filter = ("estado", "sucursal", "barbero")
     date_hierarchy = "inicio"
     inlines = [CitaServicioInline]

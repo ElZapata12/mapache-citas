@@ -10,7 +10,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from catalogo.models import Barbero, Servicio
+from catalogo.models import Barbero, Servicio, Sucursal
 from citas import services
 from citas.models import Cita
 from clientes.models import Cliente
@@ -26,10 +26,12 @@ def proximo_lunes():
 
 @pytest.fixture
 def datos():
+    centro = Sucursal.objects.create(nombre="Centro")
     return {
-        "luis": Barbero.objects.create(nombre="Luis Hernández"),
-        "toño": Barbero.objects.create(nombre="Toño Castillo"),
-        "beto": Barbero.objects.create(nombre="Beto Sánchez", activo=False),
+        "centro": centro,
+        "luis": Barbero.objects.create(nombre="Luis Hernández", sucursal=centro),
+        "toño": Barbero.objects.create(nombre="Toño Castillo", sucursal=centro),
+        "beto": Barbero.objects.create(nombre="Beto Sánchez", activo=False, sucursal=centro),
         "cliente": Cliente.objects.create(nombre="Arturo Beltrán", telefono="5587654321"),
         "corte": Servicio.objects.create(descripcion="Corte clásico", costo=Decimal("150"), duracion_min=30),
         "barba": Servicio.objects.create(descripcion="Arreglo de barba", costo=Decimal("120"), duracion_min=30),

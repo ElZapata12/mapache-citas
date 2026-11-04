@@ -77,13 +77,26 @@ def obtener_servicios_activos(servicio_ids):
     return servicios
 
 
+def validar_sucursal(barbero, sucursal_permitida_id):
+    """RN-12 y RN-13: la sucursal debe estar activa y, si el usuario es de una sucursal,
+    el barbero también debe serlo."""
+    if not barbero.sucursal.activa:
+        raise ReglaDeNegocioError("SUCURSAL_NO_DISPONIBLE", f"{barbero.sucursal.nombre} está inactiva.")
+    if sucursal_permitida_id is not None and barbero.sucursal_id != sucursal_permitida_id:
+        raise ReglaDeNegocioError("FUERA_DE_SUCURSAL", "Ese barbero es de otra sucursal.", status_http=403)
+
+
 @transaction.atomic
-def crear_cita(*, barbero_id, cliente_id, servicio_ids, fecha, hora_inicio, notas=""):
+def crear_cita(*, barbero_id, cliente_id, servicio_ids, fecha, hora_inicio, notas="", sucursal_permitida_id=None):
     # Bloquea la fila del barbero hasta que termine la transacción: si otra recepcionista
     # intenta agendar con el mismo barbero al mismo tiempo, espera su turno (CA-10).
-    barbero = Barbero.objects.select_for_update().filter(pk=barbero_id).first()
+    # of=("self",): bloquea solo al barbero, no la fila de la sucursal que trae el select_related.
+    barbero = (
+        Barbero.objects.select_related("sucursal").select_for_update(of=("self",)).filter(pk=barbero_id).first()
+    )
     if barbero is None or not barbero.activo:
         raise ReglaDeNegocioError("BARBERO_NO_DISPONIBLE", "El barbero no existe o está inactivo.")
+    validar_sucursal(barbero, sucursal_permitida_id)
 
     cliente = Cliente.objects.filter(pk=cliente_id).first()
     if cliente is None:
@@ -99,7 +112,10 @@ def crear_cita(*, barbero_id, cliente_id, servicio_ids, fecha, hora_inicio, nota
         raise error_de_empalme(barbero, choque)
 
     try:
-        cita = Cita.objects.create(barbero=barbero, cliente=cliente, inicio=inicio, fin=fin, notas=notas)
+        # RN-11: la cita guarda la sucursal que tenía el barbero en este momento.
+        cita = Cita.objects.create(
+            barbero=barbero, cliente=cliente, sucursal=barbero.sucursal, inicio=inicio, fin=fin, notas=notas
+        )
     except IntegrityError:
         # Segunda defensa: la restricción de PostgreSQL detectó un empalme.
         raise ReglaDeNegocioError("HORARIO_OCUPADO", "Ese horario se acaba de ocupar.", status_http=409)
@@ -113,11 +129,12 @@ def crear_cita(*, barbero_id, cliente_id, servicio_ids, fecha, hora_inicio, nota
     return cita
 
 
-def horarios_disponibles(*, barbero_id, servicio_ids, fecha):
+def horarios_disponibles(*, barbero_id, servicio_ids, fecha, sucursal_permitida_id=None):
     """Devuelve las horas de inicio ("HH:MM") donde caben todos los servicios sin empalmes."""
-    barbero = Barbero.objects.filter(pk=barbero_id, activo=True).first()
+    barbero = Barbero.objects.select_related("sucursal").filter(pk=barbero_id, activo=True).first()
     if barbero is None:
         raise ReglaDeNegocioError("BARBERO_NO_DISPONIBLE", "El barbero no existe o está inactivo.")
+    validar_sucursal(barbero, sucursal_permitida_id)
     servicios = obtener_servicios_activos(servicio_ids)
     duracion = timedelta(minutes=duracion_total(servicios))
 
@@ -159,3 +176,16 @@ def cambiar_estado(cita, nuevo_estado):
     cita.estado = nuevo_estado
     cita.save(update_fields=["estado"])
     return cita
+
+
+def verificar_que_se_puede_desactivar(sucursal):
+    """RN-12: no se desactiva una sucursal con citas programadas por venir."""
+    pendientes = Cita.objects.filter(
+        sucursal=sucursal, estado=Cita.Estado.PROGRAMADA, fin__gte=timezone.now()
+    ).count()
+    if pendientes:
+        raise ReglaDeNegocioError(
+            "SUCURSAL_CON_CITAS",
+            f"{sucursal.nombre} tiene {pendientes} cita(s) programada(s) por venir. Cancélalas o atiéndelas primero.",
+            status_http=409,
+        )
