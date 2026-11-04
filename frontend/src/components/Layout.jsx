@@ -14,8 +14,11 @@ export default function Layout() {
         {!esBarbero && <NavLink to="/citas/nueva">Nueva cita</NavLink>}
         {!esBarbero && <NavLink to="/clientes">Clientes</NavLink>}
         {esAdmin && <NavLink to="/resumen">Resumen del día</NavLink>}
+        {esAdmin && <NavLink to="/sucursales">Sucursales</NavLink>}
         <div className="menu__usuario">
           {usuario.nombre} · {usuario.rol}
+          <br />
+          <small>{usuario.sucursal_nombre ?? 'Todas las sucursales'}</small>
           <br />
           <button className="boton" style={{ marginTop: 8 }} onClick={salir}>Salir</button>
         </div>

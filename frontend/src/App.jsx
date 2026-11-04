@@ -7,6 +7,7 @@ import DetalleCita from './pages/DetalleCita.jsx'
 import Login from './pages/Login.jsx'
 import NuevaCita from './pages/NuevaCita.jsx'
 import Resumen from './pages/Resumen.jsx'
+import Sucursales from './pages/Sucursales.jsx'
 
 export default function App() {
   return (
@@ -32,6 +33,10 @@ export default function App() {
         <Route
           path="/resumen"
           element={<RutaProtegida roles={['admin']}><Resumen /></RutaProtegida>}
+        />
+        <Route
+          path="/sucursales"
+          element={<RutaProtegida roles={['admin']}><Sucursales /></RutaProtegida>}
         />
       </Route>
       <Route path="*" element={<Navigate to="/agenda" replace />} />

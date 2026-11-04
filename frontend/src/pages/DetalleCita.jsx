@@ -5,8 +5,7 @@ import ChipEstado from '../components/ChipEstado.jsx'
 import { dinero, hora } from '../utils/fechas.js'
 
 export default function DetalleCita() {
-  const { id } = useParams() // el número que viene en la URL: /citas/12
-  // Guardamos a qué cita pertenece lo cargado; si no coincide con la URL, todavía está cargando.
+  const { id } = useParams()
   const [resultado, setResultado] = useState({ id: null, cita: null, error: '' })
   const [errorAccion, setErrorAccion] = useState('')
 
@@ -54,6 +53,7 @@ export default function DetalleCita() {
 
       <section className="tarjeta" style={{ display: 'grid', gap: 8 }}>
         <span>Cita #{cita.id} · {cita.inicio.slice(0, 10)}</span>
+        <span>Sucursal: <strong>{cita.sucursal_nombre}</strong></span>
         <span>Barbero: <strong>{cita.barbero_nombre}</strong></span>
         <span>Hora: <strong>{hora(cita.inicio)} – {hora(cita.fin)}</strong></span>
         <span>Servicios: {cita.servicios.map((s) => `${s.descripcion} (${dinero(s.costo_cobrado)})`).join(', ')}</span>
