@@ -6,12 +6,15 @@ from rest_framework.views import APIView
 
 
 def datos_de_usuario(usuario):
+    sucursal = usuario.sucursal_efectiva
     return {
         "id": usuario.id,
         "username": usuario.username,
         "nombre": usuario.get_full_name() or usuario.username,
         "rol": usuario.rol,
         "barbero": usuario.barbero_id,
+        "sucursal": sucursal.id if sucursal else None,
+        "sucursal_nombre": sucursal.nombre if sucursal else None,
     }
 
 

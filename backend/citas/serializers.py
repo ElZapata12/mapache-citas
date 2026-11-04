@@ -26,6 +26,7 @@ class CitaSerializer(serializers.ModelSerializer):
     """Forma de salida de una cita."""
 
     barbero_nombre = serializers.CharField(source="barbero.nombre", read_only=True)
+    sucursal_nombre = serializers.CharField(source="sucursal.nombre", read_only=True)
     cliente_nombre = serializers.CharField(source="cliente.nombre", read_only=True)
     cliente_telefono = serializers.CharField(source="cliente.telefono", read_only=True)
     servicios = CitaServicioSerializer(many=True, read_only=True)
@@ -37,6 +38,8 @@ class CitaSerializer(serializers.ModelSerializer):
             "id",
             "barbero",
             "barbero_nombre",
+            "sucursal",
+            "sucursal_nombre",
             "cliente",
             "cliente_nombre",
             "cliente_telefono",
@@ -60,6 +63,7 @@ class FiltroCitasSerializer(serializers.Serializer):
 
     fecha = serializers.DateField(required=False)
     barbero = serializers.IntegerField(required=False)
+    sucursal = serializers.IntegerField(required=False)
 
 
 class CambiarEstadoSerializer(serializers.Serializer):
@@ -67,6 +71,7 @@ class CambiarEstadoSerializer(serializers.Serializer):
 
 
 class FechaSerializer(serializers.Serializer):
-    """Valida la fecha opcional de los reportes (AAAA-MM-DD)."""
+    """Valida los filtros opcionales de los reportes: fecha (AAAA-MM-DD) y sucursal."""
 
     fecha = serializers.DateField(required=False)
+    sucursal = serializers.IntegerField(required=False)
