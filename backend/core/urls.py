@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 
-from catalogo.views import BarberoListaView, ServicioListaView
+from catalogo.views import BarberoListaView, ServicioListaView, SucursalDetalleView, SucursalListaCrearView
 from citas.views import (
     CitaDetalleView,
     CitaEstadoView,
@@ -21,6 +21,8 @@ urlpatterns = [
     # Catálogo
     path("api/barberos/", BarberoListaView.as_view()),
     path("api/servicios/", ServicioListaView.as_view()),
+    path("api/sucursales/", SucursalListaCrearView.as_view()),
+    path("api/sucursales/<int:pk>/", SucursalDetalleView.as_view()),
     # Citas
     path("api/citas/", CitaListaCrearView.as_view()),
     path("api/citas/<int:pk>/", CitaDetalleView.as_view()),
