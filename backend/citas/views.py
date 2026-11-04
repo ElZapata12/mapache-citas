@@ -21,11 +21,19 @@ from .serializers import (
 
 
 def citas_visibles_para(usuario):
-    """El barbero solo ve sus propias citas; admin y recepción ven todas."""
-    citas = Cita.objects.select_related("barbero", "cliente").prefetch_related("servicios__servicio")
+    """Barbero: solo sus citas. Recepción: las de su sucursal. Admin: todas (RN-10, RN-13)."""
+    citas = Cita.objects.select_related("barbero", "cliente", "sucursal").prefetch_related("servicios__servicio")
     if usuario.rol == Usuario.Rol.BARBERO:
         citas = citas.filter(barbero_id=usuario.barbero_id)
+    elif usuario.rol == Usuario.Rol.RECEPCION:
+        # Si recepción no tuviera sucursal (None), no ve nada: falla "cerrado", que es lo seguro.
+        citas = citas.filter(sucursal_id=usuario.sucursal_id)
     return citas
+
+
+def sucursal_de_recepcion(usuario):
+    """Id de la sucursal que limita al usuario (solo recepción). None = sin límite."""
+    return usuario.sucursal_id if usuario.rol == Usuario.Rol.RECEPCION else None
 
 
 class CitaListaCrearView(APIView):
@@ -39,6 +47,9 @@ class CitaListaCrearView(APIView):
         barbero = filtros.validated_data.get("barbero")
         if barbero:
             citas = citas.filter(barbero_id=barbero)
+        sucursal = filtros.validated_data.get("sucursal")
+        if sucursal:
+            citas = citas.filter(sucursal_id=sucursal)
         return Response(CitaSerializer(citas, many=True).data)
 
     def post(self, request):
@@ -57,6 +68,7 @@ class CitaListaCrearView(APIView):
             fecha=datos["fecha"],
             hora_inicio=datos["hora_inicio"],
             notas=datos.get("notas", ""),
+            sucursal_permitida_id=sucursal_de_recepcion(request.user),
         )
         cita = citas_visibles_para(request.user).get(pk=cita.pk)
         return Response(CitaSerializer(cita).data, status=status.HTTP_201_CREATED)
@@ -78,7 +90,10 @@ class DisponibilidadView(APIView):
         entrada.is_valid(raise_exception=True)
         datos = entrada.validated_data
         horarios = services.horarios_disponibles(
-            barbero_id=datos["barbero"], servicio_ids=datos["servicios"], fecha=datos["fecha"]
+            barbero_id=datos["barbero"],
+            servicio_ids=datos["servicios"],
+            fecha=datos["fecha"],
+            sucursal_permitida_id=sucursal_de_recepcion(request.user),
         )
         return Response({"horarios": horarios})
 
@@ -111,23 +126,38 @@ class ResumenDiaView(APIView):
         entrada = FechaSerializer(data=request.query_params)
         entrada.is_valid(raise_exception=True)
         fecha = entrada.validated_data.get("fecha") or timezone.localdate()
+        sucursal = entrada.validated_data.get("sucursal")
 
         citas = Cita.objects.filter(inicio__date=fecha)
+        if sucursal:
+            citas = citas.filter(sucursal_id=sucursal)
         por_estado = {e: 0 for e in Cita.Estado.values}
         for fila in citas.values("estado").annotate(n=Count("id")):
             por_estado[fila["estado"]] = fila["n"]
 
         # RN-07: solo las citas atendidas suman al cobrado.
         atendidas = CitaServicio.objects.filter(cita__inicio__date=fecha, cita__estado=Cita.Estado.ATENDIDA)
+        if sucursal:
+            atendidas = atendidas.filter(cita__sucursal_id=sucursal)
         cobrado = atendidas.aggregate(total=Sum("costo_cobrado"))["total"] or 0
+        # Se agrupa por id: dos barberos de sucursales distintas pueden llamarse igual.
         por_barbero = (
-            citas.values("barbero__nombre")
+            citas.values("barbero_id", "barbero__nombre", "sucursal__nombre")
             .annotate(
                 citas=Count("id", distinct=True),
                 atendidas=Count("id", filter=Q(estado=Cita.Estado.ATENDIDA), distinct=True),
                 cobrado=Sum("servicios__costo_cobrado", filter=Q(estado=Cita.Estado.ATENDIDA)),
             )
-            .order_by("barbero__nombre")
+            .order_by("sucursal__nombre", "barbero__nombre")
+        )
+        por_sucursal = (
+            citas.values("sucursal_id", "sucursal__nombre")
+            .annotate(
+                citas=Count("id", distinct=True),
+                atendidas=Count("id", filter=Q(estado=Cita.Estado.ATENDIDA), distinct=True),
+                cobrado=Sum("servicios__costo_cobrado", filter=Q(estado=Cita.Estado.ATENDIDA)),
+            )
+            .order_by("sucursal__nombre")
         )
         por_servicio = (
             atendidas.values("servicio__descripcion")
@@ -143,11 +173,21 @@ class ResumenDiaView(APIView):
                 "por_barbero": [
                     {
                         "barbero": f["barbero__nombre"],
+                        "sucursal": f["sucursal__nombre"],
                         "citas": f["citas"],
                         "atendidas": f["atendidas"],
                         "cobrado": f"{f['cobrado'] or 0:.2f}",
                     }
                     for f in por_barbero
+                ],
+                "por_sucursal": [
+                    {
+                        "sucursal": f["sucursal__nombre"],
+                        "citas": f["citas"],
+                        "atendidas": f["atendidas"],
+                        "cobrado": f"{f['cobrado'] or 0:.2f}",
+                    }
+                    for f in por_sucursal
                 ],
                 "por_servicio": [
                     {"servicio": f["servicio__descripcion"], "veces": f["veces"], "cobrado": f"{f['cobrado']:.2f}"}

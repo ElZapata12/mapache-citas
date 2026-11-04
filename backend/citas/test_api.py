@@ -195,3 +195,79 @@ def test_cita_inexistente_responde_404_en_espanol(escenario):
     respuesta = cliente_api("ana").get("/api/citas/99999/")
     assert respuesta.status_code == 404
     assert respuesta.data["error"] == {"codigo": "NO_ENCONTRADO", "mensaje": "No se encontró lo que buscas."}
+
+
+# ---------- Sucursales (S-09) ----------
+
+
+@pytest.fixture
+def dos_sucursales(escenario):
+    norte = Sucursal.objects.create(nombre="Norte")
+    pepe = Barbero.objects.create(nombre="Luis Hernández", sucursal=norte)  # mismo nombre que Luis, a propósito
+    return {**escenario, "norte": norte, "pepe": pepe}
+
+
+def test_recepcion_no_agenda_con_barbero_de_otra_sucursal(dos_sucursales):
+    e = dos_sucursales
+    r = cliente_api("ana").post("/api/citas/", {**cuerpo(e), "barbero": e["pepe"].id}, format="json")
+    assert r.status_code == 403
+    assert r.data["error"]["codigo"] == "FUERA_DE_SUCURSAL"
+
+
+def test_disponibilidad_respeta_la_sucursal(dos_sucursales):
+    e = dos_sucursales
+    url = f"/api/disponibilidad/?barbero={e['pepe'].id}&fecha={proximo_lunes()}&servicios={e['corte'].id}"
+    assert cliente_api("ana").get(url).status_code == 403
+    assert cliente_api("jesus").get(url).status_code == 200
+
+
+def test_la_cita_guarda_la_sucursal_del_barbero(dos_sucursales):
+    e = dos_sucursales
+    r = cliente_api("ana").post("/api/citas/", cuerpo(e), format="json")
+    assert r.status_code == 201
+    assert r.data["sucursal"] == e["centro"].id
+    assert r.data["sucursal_nombre"] == "Centro"
+
+
+def test_la_cita_conserva_su_sucursal_si_el_barbero_cambia(dos_sucursales):
+    e = dos_sucursales
+    cita = cliente_api("ana").post("/api/citas/", cuerpo(e), format="json").data
+    e["luis"].sucursal = e["norte"]
+    e["luis"].save()
+    assert Cita.objects.get(pk=cita["id"]).sucursal_id == e["centro"].id
+
+
+def test_recepcion_solo_ve_su_sucursal_y_admin_filtra(dos_sucursales):
+    e = dos_sucursales
+    admin = cliente_api("jesus")
+    admin.post("/api/citas/", cuerpo(e), format="json")
+    admin.post("/api/citas/", {**cuerpo(e), "barbero": e["pepe"].id}, format="json")
+    fecha = proximo_lunes().isoformat()
+
+    assert len(admin.get(f"/api/citas/?fecha={fecha}").data) == 2
+    assert len(admin.get(f"/api/citas/?fecha={fecha}&sucursal={e['norte'].id}").data) == 1
+    assert len(cliente_api("ana").get(f"/api/citas/?fecha={fecha}").data) == 1
+
+
+def test_yo_incluye_la_sucursal(dos_sucursales):
+    assert cliente_api("ana").get("/api/auth/yo/").data["sucursal_nombre"] == "Centro"
+    assert cliente_api("luis").get("/api/auth/yo/").data["sucursal_nombre"] == "Centro"
+    assert cliente_api("jesus").get("/api/auth/yo/").data["sucursal"] is None
+
+
+def test_resumen_no_mezcla_barberos_con_el_mismo_nombre(dos_sucursales):
+    e = dos_sucursales
+    admin = cliente_api("jesus")
+    for barbero in (e["luis"], e["pepe"]):
+        c = admin.post("/api/citas/", {**cuerpo(e), "barbero": barbero.id}, format="json").data
+        admin.patch(f"/api/citas/{c['id']}/estado/", {"estado": "atendida"}, format="json")
+    fecha = proximo_lunes().isoformat()
+
+    r = admin.get(f"/api/reportes/dia/?fecha={fecha}").data
+    assert len(r["por_barbero"]) == 2
+    assert {f["sucursal"] for f in r["por_barbero"]} == {"Centro", "Norte"}
+    assert len(r["por_sucursal"]) == 2
+
+    solo_norte = admin.get(f"/api/reportes/dia/?fecha={fecha}&sucursal={e['norte'].id}").data
+    assert solo_norte["total_citas"] == 1
+    assert [f["sucursal"] for f in solo_norte["por_sucursal"]] == ["Norte"]
