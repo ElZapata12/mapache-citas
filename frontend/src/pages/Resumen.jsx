@@ -1,36 +1,41 @@
 import { useEffect, useState } from 'react'
 import { resumenDelDia } from '../api/endpoints.js'
+import SelectorSucursal from '../components/SelectorSucursal.jsx'
 import { dinero, hoyISO } from '../utils/fechas.js'
 
 export default function Resumen() {
   const [fecha, setFecha] = useState(hoyISO())
-  // Guardamos para qué fecha son los datos; si no coincide con la elegida, está cargando.
-  const [resultado, setResultado] = useState({ fecha: null, datos: null, error: '' })
+  const [sucursal, setSucursal] = useState('')
+  const clave = `${fecha}|${sucursal}`
+  const [resultado, setResultado] = useState({ clave: null, datos: null, error: '' })
 
   useEffect(() => {
     let vigente = true
-    resumenDelDia(fecha)
-      .then((datos) => vigente && setResultado({ fecha, datos, error: '' }))
-      .catch((e) => vigente && setResultado({ fecha, datos: null, error: e.message }))
+    resumenDelDia(fecha, sucursal)
+      .then((datos) => vigente && setResultado({ clave, datos, error: '' }))
+      .catch((e) => vigente && setResultado({ clave, datos: null, error: e.message }))
     return () => {
       vigente = false
     }
-  }, [fecha])
+  }, [fecha, sucursal, clave])
 
-  const cargando = resultado.fecha !== fecha
+  const cargando = resultado.clave !== clave
   const { datos, error } = resultado
 
   return (
     <>
       <div className="fila" style={{ justifyContent: 'space-between' }}>
         <h1>Resumen del día</h1>
-        <input
-          type="date"
-          aria-label="Fecha"
-          className="boton"
-          value={fecha}
-          onChange={(e) => e.target.value && setFecha(e.target.value)}
-        />
+        <div className="fila">
+          <input
+            type="date"
+            aria-label="Fecha"
+            className="boton"
+            value={fecha}
+            onChange={(e) => e.target.value && setFecha(e.target.value)}
+          />
+          <SelectorSucursal valor={sucursal} onCambio={setSucursal} />
+        </div>
       </div>
 
       {cargando && <p className="vacio">Cargando…</p>}
@@ -46,13 +51,28 @@ export default function Resumen() {
             <div className="tarjeta"><span className="vacio">Cobrado (solo atendidas)</span><h2>{dinero(datos.cobrado)}</h2></div>
           </div>
 
+          {!sucursal && (
+            <section className="tarjeta">
+              <h2>Por sucursal</h2>
+              <table>
+                <thead><tr><th>Sucursal</th><th>Citas</th><th>Atendidas</th><th>Cobrado</th></tr></thead>
+                <tbody>
+                  {datos.por_sucursal.map((f) => (
+                    <tr key={f.sucursal}><td>{f.sucursal}</td><td>{f.citas}</td><td>{f.atendidas}</td><td>{dinero(f.cobrado)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+              {datos.por_sucursal.length === 0 && <p className="vacio">No hay citas este día.</p>}
+            </section>
+          )}
+
           <section className="tarjeta">
             <h2>Por barbero</h2>
             <table>
-              <thead><tr><th>Barbero</th><th>Citas</th><th>Atendidas</th><th>Cobrado</th></tr></thead>
+              <thead><tr><th>Barbero</th><th>Sucursal</th><th>Citas</th><th>Atendidas</th><th>Cobrado</th></tr></thead>
               <tbody>
                 {datos.por_barbero.map((f) => (
-                  <tr key={f.barbero}><td>{f.barbero}</td><td>{f.citas}</td><td>{f.atendidas}</td><td>{dinero(f.cobrado)}</td></tr>
+                  <tr key={`${f.sucursal}-${f.barbero}`}><td>{f.barbero}</td><td>{f.sucursal}</td><td>{f.citas}</td><td>{f.atendidas}</td><td>{dinero(f.cobrado)}</td></tr>
                 ))}
               </tbody>
             </table>

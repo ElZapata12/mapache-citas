@@ -7,10 +7,15 @@ import {
   listarBarberos,
   listarServicios,
 } from '../api/endpoints.js'
+import SelectorSucursal from '../components/SelectorSucursal.jsx'
+import { useSesion } from '../context/sesion.js'
 import { dinero, hoyISO } from '../utils/fechas.js'
 
 export default function NuevaCita() {
   const navegar = useNavigate()
+  const { usuario } = useSesion()
+  const esAdmin = usuario.rol === 'admin'
+  const [sucursal, setSucursal] = useState(esAdmin ? '' : String(usuario.sucursal ?? ''))
   const [barberos, setBarberos] = useState([])
   const [servicios, setServicios] = useState([])
 
@@ -26,14 +31,22 @@ export default function NuevaCita() {
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
 
-  // 1. Al abrir la pantalla: trae barberos y servicios activos.
   useEffect(() => {
-    listarBarberos().then(setBarberos).catch((e) => setError(e.message))
     listarServicios().then(setServicios).catch((e) => setError(e.message))
   }, [])
 
-  // 2. Cuando ya hay barbero, fecha y servicios: pide los horarios libres.
-  //    "clave" resume esos tres datos; si cambia alguno, se piden de nuevo.
+  
+  useEffect(() => {
+    if (!sucursal) return
+    let vigente = true
+    listarBarberos(sucursal)
+      .then((lista) => vigente && setBarberos(lista))
+      .catch((e) => vigente && setError(e.message))
+    return () => {
+      vigente = false
+    }
+  }, [sucursal])
+
   const clave = barbero && fecha && elegidos.length > 0 ? `${barbero}|${fecha}|${elegidos.join(',')}` : ''
   useEffect(() => {
     if (!clave) return
@@ -59,7 +72,7 @@ export default function NuevaCita() {
 
   function alternarServicio(id) {
     setElegidos((actuales) => (actuales.includes(id) ? actuales.filter((x) => x !== id) : [...actuales, id]))
-    setHoraInicio('') // si cambian los servicios, la hora elegida puede ya no servir
+    setHoraInicio('')
   }
 
   const seleccion = servicios.filter((s) => elegidos.includes(s.id))
@@ -74,7 +87,7 @@ export default function NuevaCita() {
       await crearCita({ cliente: cliente.id, barbero: Number(barbero), servicios: elegidos, fecha, hora_inicio: horaInicio })
       navegar(`/agenda?fecha=${fecha}`)
     } catch (e) {
-      // 409 = otra persona ocupó el horario: se avisa y se vuelven a pedir los horarios.
+      
       setError(e.message)
       if (e.status === 409) {
         setHoraInicio('')
@@ -134,10 +147,17 @@ export default function NuevaCita() {
 
       <section className="tarjeta" style={{ display: 'grid', gap: 12 }}>
         <h2>3. Barbero, fecha y hora</h2>
+        {esAdmin && (
+          <SelectorSucursal
+            conTodas={false}
+            valor={sucursal}
+            onCambio={(v) => { setSucursal(v); setBarbero(''); setBarberos([]); setHoraInicio('') }}
+          />
+        )}
         <div className="fila">
           <div className="campo">
             <label htmlFor="barbero">Barbero</label>
-            <select id="barbero" value={barbero} onChange={(e) => { setBarbero(e.target.value); setHoraInicio('') }}>
+            <select id="barbero" value={barbero} disabled={!sucursal} onChange={(e) => { setBarbero(e.target.value); setHoraInicio('') }}>
               <option value="">Elige…</option>
               {barberos.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
             </select>

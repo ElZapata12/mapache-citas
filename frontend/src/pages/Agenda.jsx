@@ -2,35 +2,44 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { listarCitas } from '../api/endpoints.js'
 import ChipEstado from '../components/ChipEstado.jsx'
+import SelectorSucursal from '../components/SelectorSucursal.jsx'
 import { useSesion } from '../context/sesion.js'
 import { hora, hoyISO } from '../utils/fechas.js'
 
 export default function Agenda() {
   const { usuario } = useSesion()
-  // La fecha vive en la URL (?fecha=...): así se puede recargar o compartir la página.
   const [params, setParams] = useSearchParams()
   const fecha = params.get('fecha') || hoyISO()
-  // Guardamos para qué fecha son las citas cargadas. Si no coincide con la fecha elegida, está cargando.
-  const [resultado, setResultado] = useState({ fecha: null, citas: [], error: '' })
+  const sucursal = params.get('sucursal') || ''
+  const esAdmin = usuario.rol === 'admin'
+
+  function cambiarParam(nombre, valor) {
+    const nuevos = new URLSearchParams(params)
+    if (valor) nuevos.set(nombre, valor)
+    else nuevos.delete(nombre)
+    setParams(nuevos)
+  }
+
+  const clave = `${fecha}|${sucursal}`
+  const [resultado, setResultado] = useState({ clave: null, citas: [], error: '' })
 
   useEffect(() => {
-    let vigente = true // evita mostrar datos viejos si el usuario cambia de fecha muy rápido
-    listarCitas(fecha)
-      .then((citas) => vigente && setResultado({ fecha, citas, error: '' }))
-      .catch((e) => vigente && setResultado({ fecha, citas: [], error: e.message }))
+    let vigente = true
+    listarCitas(fecha, sucursal)
+      .then((citas) => vigente && setResultado({ clave, citas, error: '' }))
+      .catch((e) => vigente && setResultado({ clave, citas: [], error: e.message }))
     return () => {
       vigente = false
     }
-  }, [fecha]) // se vuelve a ejecutar cada vez que cambia la fecha
+  }, [fecha, sucursal, clave])
 
-  const cargando = resultado.fecha !== fecha
+  const cargando = resultado.clave !== clave
   const { citas, error } = resultado
 
-  // Agrupa las citas por barbero: { "Luis Hernández": [cita, cita], ... }
   const porBarbero = {}
   for (const cita of citas) {
-    porBarbero[cita.barbero_nombre] ??= []
-    porBarbero[cita.barbero_nombre].push(cita)
+    porBarbero[cita.barbero] ??= { nombre: cita.barbero_nombre, sucursal: cita.sucursal_nombre, citas: [] }
+    porBarbero[cita.barbero].citas.push(cita)
   }
 
   return (
@@ -42,9 +51,10 @@ export default function Agenda() {
             type="date"
             aria-label="Fecha"
             value={fecha}
-            onChange={(e) => e.target.value && setParams({ fecha: e.target.value })}
+            onChange={(e) => e.target.value && cambiarParam('fecha', e.target.value)}
             className="boton"
           />
+          {esAdmin && <SelectorSucursal valor={sucursal} onCambio={(v) => cambiarParam('sucursal', v)} />}
           {usuario.rol !== 'barbero' && (
             <Link className="boton boton--primario" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} to="/citas/nueva">
               Nueva cita
@@ -58,11 +68,12 @@ export default function Agenda() {
       {!cargando && !error && citas.length === 0 && <p className="vacio">No hay citas este día.</p>}
 
       <div className="agenda">
-        {Object.entries(porBarbero).map(([barbero, suyas]) => (
-          <section key={barbero} className="tarjeta">
-            <h2>{barbero}</h2>
-            <span className="vacio">{suyas.length} citas</span>
-            {suyas.map((cita) => (
+        {Object.entries(porBarbero).map(([id, grupo]) => (
+          <section key={id} className="tarjeta">
+            <h2>{grupo.nombre}</h2>
+            {esAdmin && !sucursal && <span className="vacio">{grupo.sucursal} · </span>}
+            <span className="vacio">{grupo.citas.length} citas</span>
+            {grupo.citas.map((cita) => (
               <Link key={cita.id} to={`/citas/${cita.id}`} className={`cita cita--${cita.estado}`}>
                 <strong>{hora(cita.inicio)}–{hora(cita.fin)}</strong> · {cita.cliente_nombre}
                 <br />
