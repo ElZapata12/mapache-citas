@@ -23,6 +23,8 @@ class Cita(models.Model):
 
     barbero = models.ForeignKey(Barbero, on_delete=models.PROTECT, related_name="citas")
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="citas")
+    # Copia de la sucursal del barbero al agendar (RN-11).
+    sucursal = models.ForeignKey("catalogo.Sucursal", on_delete=models.PROTECT, related_name="citas")
     inicio = models.DateTimeField()
     fin = models.DateTimeField()
     estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.PROGRAMADA)
@@ -31,7 +33,10 @@ class Cita(models.Model):
 
     class Meta:
         ordering = ["inicio"]
-        indexes = [models.Index(fields=["barbero", "inicio"])]
+        indexes = [
+            models.Index(fields=["barbero", "inicio"]),
+            models.Index(fields=["sucursal", "inicio"]),
+        ]
         constraints = [
             models.CheckConstraint(condition=Q(fin__gt=F("inicio")), name="cita_fin_despues_de_inicio"),
             # Segunda defensa contra empalmes (RN-01): PostgreSQL rechaza dos citas

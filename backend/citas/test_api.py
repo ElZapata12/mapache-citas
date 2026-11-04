@@ -8,7 +8,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from catalogo.models import Barbero, Servicio
+from catalogo.models import Barbero, Servicio, Sucursal
 from citas.models import Cita
 from clientes.models import Cliente
 from cuentas.models import Usuario
@@ -23,14 +23,15 @@ def proximo_lunes():
 
 @pytest.fixture
 def escenario():
-    luis = Barbero.objects.create(nombre="Luis Hernández")
+    centro = Sucursal.objects.create(nombre="Centro")
+    luis = Barbero.objects.create(nombre="Luis Hernández", sucursal=centro)
     corte = Servicio.objects.create(descripcion="Corte clásico", costo=Decimal("150"), duracion_min=30)
     barba = Servicio.objects.create(descripcion="Arreglo de barba", costo=Decimal("120"), duracion_min=30)
     cliente = Cliente.objects.create(nombre="Arturo Beltrán", telefono="5587654321")
-    Usuario.objects.create_user("ana", password="clave-segura-123", rol=Usuario.Rol.RECEPCION)
+    Usuario.objects.create_user("ana", password="clave-segura-123", rol=Usuario.Rol.RECEPCION, sucursal=centro)
     Usuario.objects.create_user("jesus", password="clave-segura-123", rol=Usuario.Rol.ADMIN)
     Usuario.objects.create_user("luis", password="clave-segura-123", rol=Usuario.Rol.BARBERO, barbero=luis)
-    return {"luis": luis, "corte": corte, "barba": barba, "cliente": cliente}
+    return {"centro": centro, "luis": luis, "corte": corte, "barba": barba, "cliente": cliente}
 
 
 def cliente_api(username):
@@ -81,7 +82,7 @@ def test_validacion_de_forma_responde_400(escenario):
 
 def test_barbero_solo_ve_sus_citas_y_no_agenda(escenario):
     cliente_api("ana").post("/api/citas/", cuerpo(escenario), format="json")
-    otro = Barbero.objects.create(nombre="Toño Castillo")
+    otro = Barbero.objects.create(nombre="Toño Castillo", sucursal=escenario["centro"])
     Usuario.objects.create_user("tono", password="clave-segura-123", rol=Usuario.Rol.BARBERO, barbero=otro)
 
     luis = cliente_api("luis")
@@ -102,11 +103,16 @@ def test_disponibilidad(escenario):
 
 def test_postgres_rechaza_empalmes_aunque_se_salten_el_servicio(escenario):
     inicio = timezone.now() + timedelta(days=1)
-    Cita.objects.create(barbero=escenario["luis"], cliente=escenario["cliente"], inicio=inicio, fin=inicio + timedelta(minutes=30))
+    centro = escenario["centro"]
+    Cita.objects.create(
+        barbero=escenario["luis"], cliente=escenario["cliente"], sucursal=centro,
+        inicio=inicio, fin=inicio + timedelta(minutes=30),
+    )
     with pytest.raises(IntegrityError), transaction.atomic():
         Cita.objects.create(
             barbero=escenario["luis"],
             cliente=escenario["cliente"],
+            sucursal=centro,
             inicio=inicio + timedelta(minutes=15),
             fin=inicio + timedelta(minutes=45),
         )
@@ -141,7 +147,7 @@ def test_detalle_de_cita_y_404_para_barbero_ajeno(escenario):
     assert cliente_api("ana").get(f"/api/citas/{cita['id']}/").data["cliente_nombre"] == "Arturo Beltrán"
     assert cliente_api("luis").get(f"/api/citas/{cita['id']}/").status_code == 200
 
-    otro = Barbero.objects.create(nombre="Toño Castillo")
+    otro = Barbero.objects.create(nombre="Toño Castillo", sucursal=escenario["centro"])
     Usuario.objects.create_user("tono", password="clave-segura-123", rol=Usuario.Rol.BARBERO, barbero=otro)
     tono = cliente_api("tono")
     assert tono.get(f"/api/citas/{cita['id']}/").status_code == 404
